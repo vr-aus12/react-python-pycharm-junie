@@ -28,6 +28,26 @@ class Todo(BaseModel):
 
 todos = []
 
+# Pre-seed some data on startup
+def pre_seed():
+    statuses = ["pending", "in-progress", "completed"]
+    now = datetime.now()
+    for i in range(5):
+        day = (i * 5) + 1
+        created_at = datetime(now.year, now.month, day, 10, 0)
+        status = statuses[i % 3]
+        todo = Todo(
+            id=str(uuid.uuid4()),
+            title=f"Preloaded Task {i+1}",
+            completed=status == "completed",
+            created_at=created_at,
+            status=status,
+            due_date=datetime(now.year, now.month, day + 2, 17, 0)
+        )
+        todos.append(todo)
+
+pre_seed()
+
 @app.get("/todos", response_model=List[Todo])
 def get_todos():
     return todos
