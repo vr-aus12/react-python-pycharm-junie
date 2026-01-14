@@ -27,7 +27,7 @@ interface User {
 }
 
 const API_BASE_URL = 'http://localhost:8000';
-const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '1234567890-mock.apps.googleusercontent.com';
 
 const COLORS = ['#f59e0b', '#6366f1', '#22c55e']; // Pending, In Progress, Completed
 
