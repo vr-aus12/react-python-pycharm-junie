@@ -1,3 +1,106 @@
+/* Login Styles */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100vw;
+  background-color: var(--bg-color);
+}
+
+.login-card {
+  background: var(--card-bg);
+  padding: 3rem;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+.login-card h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary);
+}
+
+.login-card p {
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.login-button-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.mock-login-btn {
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  color: var(--text-main);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.mock-login-btn:hover {
+  background: #e2e8f0;
+}
+
+/* User Profile Header */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--card-bg);
+  border-radius: 50px;
+  box-shadow: var(--shadow);
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.user-name {
+  font-weight: 700;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  margin-top: -2px;
+}
+
+.logout-btn:hover {
+  text-decoration: underline;
+}
+
+/* Existing Styles ... */
 :root {
   --primary: #6366f1;
   --primary-hover: #4f46e5;
