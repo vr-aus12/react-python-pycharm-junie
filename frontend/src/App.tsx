@@ -4,7 +4,9 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts'
-import { LayoutDashboard, ListTodo, PieChart as PieIcon, RefreshCw } from 'lucide-react'
+import { LayoutDashboard, ListTodo, PieChart as PieIcon, RefreshCw, LogOut, User as UserIcon } from 'lucide-react'
+import { GoogleOAuthProvider, GoogleLogin, googleLogout } from '@react-oauth/google'
+import { jwtDecode } from 'jwt-decode'
 import './App.css'
 
 interface Todo {
@@ -17,34 +19,79 @@ interface Todo {
   status: string;
 }
 
-const API_URL = 'http://localhost:8000/todos';
-const SEED_URL = 'http://localhost:8000/seed';
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  picture: string;
+}
+
+const API_BASE_URL = 'http://localhost:8000';
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
 
 const COLORS = ['#f59e0b', '#6366f1', '#22c55e']; // Pending, In Progress, Completed
 
-function App() {
+function AppContent() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [activeTab, setActiveTab] = useState<'tasks' | 'reports'>('tasks');
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
 
   useEffect(() => {
-    fetchTodos();
-  }, []);
+    if (token) {
+      fetchTodos();
+    }
+  }, [token]);
 
   const fetchTodos = async () => {
     try {
-      const response = await axios.get<Todo[]>(API_URL);
+      const response = await axios.get<Todo[]>(`${API_BASE_URL}/todos`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setTodos(response.data);
     } catch (error) {
       console.error('Error fetching todos:', error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        handleLogout();
+      }
     }
+  };
+
+  const handleLoginSuccess = async (credentialResponse: any) => {
+    try {
+      const res = await axios.post(`${API_BASE_URL}/login`, {
+        token: credentialResponse.credential
+      });
+      const { access_token, user: userData } = res.data;
+      setToken(access_token);
+      setUser(userData);
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    googleLogout();
+    setToken(null);
+    setUser(null);
+    setTodos([]);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   };
 
   const seedData = async () => {
     try {
-      await axios.post(SEED_URL);
+      await axios.post(`${API_BASE_URL}/seed`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       fetchTodos();
     } catch (error) {
       console.error('Error seeding data:', error);
@@ -54,12 +101,14 @@ function App() {
   const addTodo = async () => {
     if (!newTodo.trim()) return;
     try {
-      const response = await axios.post<Todo>(API_URL, {
+      const response = await axios.post<Todo>(`${API_BASE_URL}/todos`, {
         title: newTodo,
         completed: false,
         due_date: dueDate || undefined,
         start_date: startDate || undefined,
         status: 'pending'
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       setTodos([...todos, response.data]);
       setNewTodo('');
@@ -79,7 +128,9 @@ function App() {
         completed: nextStatus === 'completed',
         status: nextStatus
       };
-      await axios.put(`${API_URL}/${todo.id}`, updatedTodo);
+      await axios.put(`${API_BASE_URL}/todos/${todo.id}`, updatedTodo, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setTodos(todos.map(t => t.id === todo.id ? updatedTodo : t));
     } catch (error) {
       console.error('Error updating todo:', error);
@@ -88,7 +139,9 @@ function App() {
 
   const deleteTodo = async (id: string) => {
     try {
-      await axios.delete(`${API_URL}/${id}`);
+      await axios.delete(`${API_BASE_URL}/todos/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setTodos(todos.filter(t => t.id !== id));
     } catch (error) {
       console.error('Error deleting todo:', error);
@@ -106,7 +159,6 @@ function App() {
     });
   };
 
-  // Report Data Calculation
   const getPieData = () => {
     const counts = { pending: 0, 'in-progress': 0, completed: 0 };
     todos.forEach(t => {
@@ -121,15 +173,12 @@ function App() {
 
   const getMonthlyData = () => {
     const monthlyMap: Record<string, { month: string, opened: number, closed: number }> = {};
-    
-    // Last 6 months
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       const key = d.toLocaleString('default', { month: 'short', year: 'numeric' });
       monthlyMap[key] = { month: key, opened: 0, closed: 0 };
     }
-
     todos.forEach(t => {
       if (t.created_at) {
         const date = new Date(t.created_at);
@@ -142,13 +191,42 @@ function App() {
         }
       }
     });
-
     return Object.values(monthlyMap);
   };
+
+  if (!user) {
+    return (
+      <div className="login-container">
+        <div className="login-card">
+          <h1>Task Master</h1>
+          <p>Organize your life, one task at a time.</p>
+          <div className="login-button-wrapper">
+            <GoogleLogin
+              onSuccess={handleLoginSuccess}
+              onError={() => console.log('Login Failed')}
+              useOneTap
+            />
+          </div>
+          <button className="mock-login-btn" onClick={() => handleLoginSuccess({ credential: 'mock-token' })}>
+            Demo Login (No Google Account)
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="todo-container">
       <header className="app-header">
+        <div className="user-profile">
+          <img src={user.picture} alt={user.full_name} className="user-avatar" />
+          <div className="user-info">
+            <span className="user-name">{user.full_name}</span>
+            <button className="logout-btn" onClick={handleLogout} title="Logout">
+              <LogOut size={16} /> Logout
+            </button>
+          </div>
+        </div>
         <h1>Task Master</h1>
         <div className="header-actions">
            <button className={`nav-btn ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
@@ -293,6 +371,14 @@ function App() {
         </div>
       )}
     </div>
+  )
+}
+
+function App() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <AppContent />
+    </GoogleOAuthProvider>
   )
 }
 
